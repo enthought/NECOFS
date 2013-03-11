@@ -36,91 +36,145 @@ import matplotlib.tri as Tri
 import netCDF4
 
 # Enthought library imports
-from traits.api import HasTraits, List, Str, Int, Instance
+from traits.api import HasTraits, List, Str, Int, Instance, Array, Property, Any
 
 
 class OceanModel(HasTraits):
 
     url = Str('http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc')
+    nc = Any()
     keys = List
     ilayer = Int(0)
     start = Instance(dt.datetime)
-    daystr = Str
+    daystr = Property(Str)
+    itime = Property(Int)
+    time_var = Any()
+    lat = Array
+    lon = Array
+    latc = Array
+    lonc = Array
+    tri = Any()
+    nv = Array
+    h = Array
+    u = Property(Array)
+    v = Property(Array)
+    levels = Array
+    ax = List
+    ind = Array
+    idv = Array
 
-    def open(self):
-        # Open DAP
-        nc = netCDF4.Dataset(self.url)
-        self.keys = nc.variables.keys()
-        start = dt.datetime.utcnow()
+    def _nc_default(self):
+        """ Open DAP
+        """
+        return netCDF4.Dataset(self.url)
 
-        # Get desired time step  
-        time_var = nc.variables['time']
-        itime = netCDF4.date2index(start,time_var,select='nearest')
+    def _keys_default(self):
+        self.keys = self.nc.variables.keys()
 
-        # Get lon,lat coordinates for nodes (depth)
-        lat = nc.variables['lat'][:]
-        lon = nc.variables['lon'][:]
-        # Get lon,lat coordinates for cell centers (depth)
-        latc = nc.variables['latc'][:]
-        lonc = nc.variables['lonc'][:]
-        # Get Connectivity array
-        nv = nc.variables['nv'][:].T - 1 
-        # Get depth
-        h = nc.variables['h'][:]  # depth 
+    def _start_default(self):
+        return dt.datetime.utcnow()
 
-        dtime = netCDF4.num2date(time_var[itime],time_var.units)
-        self.daystr = dtime.strftime('%Y-%b-%d %H:%M')
+    def _time_var_default(self):
+        return self.nc.variables['time']
 
-        tri = Tri.Triangulation(lon,lat, triangles=nv)
+    def _get_itime(self):
+        """ Desired time slice
+        """
+        return netCDF4.date2index(self.start, self.time_var, select='nearest')
 
+    def _lat_default(self):
+        """ Latitude of grid nodes
+        """
+        return self.nc.variables['lat'][:]
+
+    def _lon_default(self):
+        """ Longitude of grid nodes
+        """
+        return self.nc.variables['lon'][:]
+
+    def _latc_default(self):
+        """ Latitude of cell centers (depth)
+        """
+        return self.nc.variables['latc'][:]
+
+    def _lonc_default(self):
+        """ Longitude of cell centers (depth)
+        """
+        return self.nc.variables['lonc'][:]
+
+    def _nv_default(self):
+        """ Get Connectivity array
+        """
+        return self.nc.variables['nv'][:].T - 1
+
+    def _h_default(self):
+        """ Get depth
+        """
+        return self.nc.variables['h'][:]
+
+    def _get_daystr(self):
+        """ String representation of current time stamp
+        """
+        dtime = netCDF4.num2date(self.time_var[self.itime],
+                                 self.time_var.units)
+        return dtime.strftime('%Y-%b-%d %H:%M')
+
+    def _tri_default(self):
+        return Tri.Triangulation(self.lon, self.lat, triangles=self.nv)
+
+    def _get_u(self):
         # get current at layer [0 = surface, -1 = bottom]
-        u = nc.variables['u'][itime, self.ilayer, :]
-        v = nc.variables['v'][itime, self.ilayer, :]
+        return self.nc.variables['u'][self.itime, self.ilayer, :]
 
-        levels=np.arange(-32,2,1)   # depth contours to plot
-        ax= [-70.97, -70.82, 42.25, 42.35] # region to plot
+    def _get_v(self):
+        return self.nc.variables['v'][self.itime, self.ilayer, :]
 
-        # find velocity points in bounding box
-        ind = np.argwhere((lonc >= ax[0]) & (lonc <= ax[1]) & (latc >= ax[2]) & (latc <= ax[3]))
+    def _levels_default(self):
+        """ depth contours to plot
+        """
+        return np.arange(-32, 2, 1)
 
-        subsample=3
-        np.random.shuffle(ind)
-        Nvec = int(len(ind) / subsample)
-        idv = ind[:Nvec]
-        self.lat, self.lon = lat, lon
-        self.latc, self.lonc = latc, lonc
-        self.tri = tri
-        self.h = h
-        self.idv = idv
-        self.u, self.v = u, v
-        self.levels = levels
-        self.ax = ax
+    def _ax_default(self):
+        """ region to plot
+        """
+        return [-70.97, -70.82, 42.25, 42.35]
+
+    def _ind_default(self):
+        """ find velocity points in bounding box
+        """
+        return np.argwhere((self.lonc >= self.ax[0]) &
+                           (self.lonc <= self.ax[1]) &
+                           (self.latc >= self.ax[2]) &
+                           (self.latc <= self.ax[3]))
+
+    def _idv_default(self):
+        subsample = 3
+        np.random.shuffle(self.ind)
+        Nvec = int(len(self.ind) / subsample)
+        return self.ind[:Nvec]
 
     def plot(self):
         # tricontourf plot of water depth with vectors on top
-        fig1 = plt.figure(figsize=(18,10))
-        ax1 = fig1.add_subplot(111,aspect=(1.0/np.cos(np.mean(self.lat)*np.pi/180.0)))
+        fig1 = plt.figure(figsize=(18, 10))
+        ax1 = fig1.add_subplot(111, aspect=(1.0/np.cos(np.mean(self.lat)*np.pi/180.0)))
         plt.tricontourf(self.tri, -self.h,
                         levels=self.levels,
                         shading='faceted',
                         cmap=plt.cm.gist_earth)
         plt.axis(self.ax)
         ax1.patch.set_facecolor('0.5')
-        cbar=plt.colorbar()
+        cbar = plt.colorbar()
         cbar.set_label('Water Depth (m)', rotation=-90)
         Q = ax1.quiver(self.lonc[self.idv],
                        self.latc[self.idv],
                        self.u[self.idv],
                        self.v[self.idv],
                        scale=20)
-        qk = plt.quiverkey(Q,0.92,0.08,0.50,'0.5 m/s',labelpos='W')
+        qk = plt.quiverkey(Q, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
         plt.title('NECOFS Velocity, Layer %d, %s' % (self.ilayer, self.daystr))
 
         plt.show()
 
 if __name__ == '__main__':
     model = OceanModel()
-    model.open()
     model.plot()
-
-    
