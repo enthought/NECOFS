@@ -1,0 +1,10 @@
+from enaml.widgets.api import Window, Container, MPLCanvas
+from matplotlib.figure import Figure
+
+enamldef Main(Window):
+    attr model
+    Container:
+        MPLCanvas: canvas:
+            figure << model.figure
+
+
