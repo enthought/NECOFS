@@ -62,6 +62,7 @@ class OceanModel(HasTraits):
     ax = List
     ind = Array
     idv = Array
+    figure = Any()
 
     def _nc_default(self):
         """ Open DAP
@@ -153,28 +154,28 @@ class OceanModel(HasTraits):
         Nvec = int(len(self.ind) / subsample)
         return self.ind[:Nvec]
 
-    def plot(self):
+    def _figure_default(self):
         # tricontourf plot of water depth with vectors on top
         fig1 = plt.figure(figsize=(18, 10))
         ax1 = fig1.add_subplot(111, aspect=(1.0/np.cos(np.mean(self.lat)*np.pi/180.0)))
-        plt.tricontourf(self.tri, -self.h,
+        ax1.tricontourf(self.tri, -self.h,
                         levels=self.levels,
                         shading='faceted',
                         cmap=plt.cm.gist_earth)
-        plt.axis(self.ax)
+        ax1.axis(self.ax)
         ax1.patch.set_facecolor('0.5')
-        cbar = plt.colorbar()
-        cbar.set_label('Water Depth (m)', rotation=-90)
+        #cbar = plt.colorbar()
+        #cbar.set_label('Water Depth (m)', rotation=-90)
         Q = ax1.quiver(self.lonc[self.idv],
                        self.latc[self.idv],
                        self.u[self.idv],
                        self.v[self.idv],
                        scale=20)
-        qk = plt.quiverkey(Q, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
+        ax1.quiverkey(Q, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
         plt.title('NECOFS Velocity, Layer %d, %s' % (self.ilayer, self.daystr))
-
-        plt.show()
+        return fig1
 
 if __name__ == '__main__':
     model = OceanModel()
-    model.plot()
+    fig = model.figure
+    plt.show()
