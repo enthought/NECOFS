@@ -26,7 +26,8 @@ temperature and salinity changes.
 * THREDDS server with other forecast and archive products: http://www.smast.umassd.edu:8080/thredds/catalog.html
 """
 
-from pylab import *
+import numpy as np
+import matplotlib.pyplot as plt
 import matplotlib.tri as Tri
 import netCDF4
 import datetime as dt
@@ -71,11 +72,11 @@ ilayer = 0
 u = nc.variables['u'][itime, ilayer, :]
 v = nc.variables['v'][itime, ilayer, :]
 
-levels=arange(-32,2,1)   # depth contours to plot
+levels=np.arange(-32,2,1)   # depth contours to plot
 ax= [-70.97, -70.82, 42.25, 42.35] # region to plot
 
 # find velocity points in bounding box
-ind = argwhere((lonc >= ax[0]) & (lonc <= ax[1]) & (latc >= ax[2]) & (latc <= ax[3]))
+ind = np.argwhere((lonc >= ax[0]) & (lonc <= ax[1]) & (latc >= ax[2]) & (latc <= ax[3]))
 
 subsample=3
 np.random.shuffle(ind)
@@ -83,15 +84,15 @@ Nvec = int(len(ind) / subsample)
 idv = ind[:Nvec]
 
 # tricontourf plot of water depth with vectors on top
-fig1 = figure(figsize=(18,10))
-ax1 = fig1.add_subplot(111,aspect=(1.0/cos(mean(lat)*pi/180.0)))
+fig1 = plt.figure(figsize=(18,10))
+ax1 = fig1.add_subplot(111,aspect=(1.0/np.cos(np.mean(lat)*np.pi/180.0)))
 plt.tricontourf(tri, -h,levels=levels,shading='faceted',cmap=plt.cm.gist_earth)
 plt.axis(ax)
 ax1.patch.set_facecolor('0.5')
-cbar=colorbar()
+cbar=plt.colorbar()
 cbar.set_label('Water Depth (m)', rotation=-90)
 Q = ax1.quiver(lonc[idv],latc[idv],u[idv],v[idv],scale=20)
-qk = quiverkey(Q,0.92,0.08,0.50,'0.5 m/s',labelpos='W')
-title('NECOFS Velocity, Layer %d, %s' % (ilayer, daystr))
+qk = plt.quiverkey(Q,0.92,0.08,0.50,'0.5 m/s',labelpos='W')
+plt.title('NECOFS Velocity, Layer %d, %s' % (ilayer, daystr))
 
 plt.show()
