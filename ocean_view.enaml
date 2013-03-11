@@ -1,10 +1,17 @@
-from enaml.widgets.api import Window, Container, MPLCanvas
+from enaml.layout.api import hbox, vbox
+from enaml.widgets.api import Window, Container, MPLCanvas, Slider, Label
 from matplotlib.figure import Figure
 
 enamldef Main(Window):
     attr model
     Container:
+        constraints = [
+            hbox(canvas, vbox(daystr, itime))
+            ]
         MPLCanvas: canvas:
             figure << model.figure
-
+        Label: daystr:
+            text << model.daystr
+        Slider: itime:
+            value := model.itime
 

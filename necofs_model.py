@@ -49,8 +49,8 @@ class OceanModel(HasTraits):
     keys = List
     ilayer = Int(0)
     start = Instance(dt.datetime)
-    daystr = Property(Str)
-    itime = Property(Int)
+    daystr = Property(Str, depends_on='itime')
+    itime = Int(0)
     time_var = Any()
     lat = Array
     lon = Array
@@ -65,7 +65,8 @@ class OceanModel(HasTraits):
     ax = List
     ind = Array
     idv = Array
-    figure = Any()
+    figure = Property(Any(), depends_on='itime')
+    quiver = Any()
 
     def _nc_default(self):
         """ Open DAP
@@ -75,16 +76,20 @@ class OceanModel(HasTraits):
     def _keys_default(self):
         self.keys = self.nc.variables.keys()
 
-    def _start_default(self):
-        return dt.datetime.utcnow()
+    def _set_start(self, start):
+        """ Desired time slice
+        """
+        self.itime = netCDF4.date2index(self.start, self.time_var, select='nearest')
+        self._start = start
+
+    def _get_start(self):
+        try:
+            return self._start
+        except AttributeError:
+            return dt.datetime.utcnow()
 
     def _time_var_default(self):
         return self.nc.variables['time']
-
-    def _get_itime(self):
-        """ Desired time slice
-        """
-        return netCDF4.date2index(self.start, self.time_var, select='nearest')
 
     def _lat_default(self):
         """ Latitude of grid nodes
@@ -133,6 +138,14 @@ class OceanModel(HasTraits):
     def _get_v(self):
         return self.nc.variables['v'][self.itime, self.ilayer, :]
 
+    '''
+    def _itime_changed(self):
+        """ set the quiver plot data without redrawing
+        """
+        self.quiver.set_UVC(self.u, self.v)
+        plt.draw()
+    '''
+
     def _levels_default(self):
         """ depth contours to plot
         """
@@ -157,7 +170,7 @@ class OceanModel(HasTraits):
         Nvec = int(len(self.ind) / subsample)
         return self.ind[:Nvec]
 
-    def _figure_default(self):
+    def _get_figure(self):
         # tricontourf plot of water depth with vectors on top
         fig1 = plt.figure(figsize=(18, 10))
         ax1 = fig1.add_subplot(111, aspect=(1.0/np.cos(np.mean(self.lat)*np.pi/180.0)))
@@ -169,12 +182,12 @@ class OceanModel(HasTraits):
         ax1.patch.set_facecolor('0.5')
         #cbar = plt.colorbar()
         #cbar.set_label('Water Depth (m)', rotation=-90)
-        Q = ax1.quiver(self.lonc[self.idv],
+        self.quiver = ax1.quiver(self.lonc[self.idv],
                        self.latc[self.idv],
                        self.u[self.idv],
                        self.v[self.idv],
                        scale=20)
-        ax1.quiverkey(Q, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
+        ax1.quiverkey(self.quiver, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
         plt.title('NECOFS Velocity, Layer %d, %s' % (self.ilayer, self.daystr))
         return fig1
 
