@@ -31,15 +31,50 @@ import datetime as dt
 
 # Major library imports
 import numpy as np
+import matplotlib
+# We want matplotlib to use a QT backend
+matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as plt
 import matplotlib.tri as Tri
 import netCDF4
 
 # Enthought library imports
 from traits.api import HasTraits, List, Str, Int, Instance, Array, Property, Any
+from enthought.traits.ui.api import View, Item
 import enaml
 from enaml.qt.qt_application import QtApplication
 from enaml.stdlib.sessions import SimpleSession
+from PySide import QtGui, QtCore
+#from pyface.qt import QtGui, QtCore
+
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+
+from enthought.traits.ui.qt4.editor import Editor
+from enthought.traits.ui.qt4.basic_editor_factory import BasicEditorFactory
+
+
+class _MPLFigureEditor(Editor):
+
+    scrollable  = True
+
+    def init(self, parent):
+        self.control = self._create_canvas(parent)
+        self.set_tooltip()
+
+    def update_editor(self):
+        pass
+
+    def _create_canvas(self, parent):
+        """ Create the MPL canvas. """
+        # matplotlib commands to create a canvas
+        mpl_canvas = FigureCanvas(self.value)
+        return mpl_canvas
+
+
+class MPLFigureEditor(BasicEditorFactory):
+
+    klass = _MPLFigureEditor
 
 
 class OceanModel(HasTraits):
@@ -67,6 +102,12 @@ class OceanModel(HasTraits):
     idv = Array
     figure = Property(Any(), depends_on='itime')
     quiver = Any()
+    # TraitsUI view
+    view = View(Item('figure', editor=MPLFigureEditor(),
+                     show_label=False),
+                width=600,
+                height=400,
+                resizable=True)
 
     def _nc_default(self):
         """ Open DAP
@@ -192,14 +233,6 @@ class OceanModel(HasTraits):
         return fig1
 
 if __name__ == '__main__':
+
     model = OceanModel()
-
-    with enaml.imports():
-        from ocean_view import Main
-
-    app = QtApplication(
-        [SimpleSession.factory('default', 'Ocean Model',
-                           lambda: Main(model=model))])
-    app.start_session('default')
-    app.start()
-    app.destroy()
+    model.configure_traits()
