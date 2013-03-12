@@ -187,7 +187,6 @@ class OceanModel(HasTraits):
         """
         self.quiver.set_UVC(self.u[self.idv], self.v[self.idv])
         self.figure.canvas.draw()
-        plt.pause(0.001)
 
     def _levels_default(self):
         """ depth contours to plot
