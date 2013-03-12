@@ -40,7 +40,8 @@ import matplotlib.tri as Tri
 import netCDF4
 
 # Enthought library imports
-from traits.api import HasTraits, List, Str, Int, Instance, Array, Property, Range, Any
+from traits.api import (HasTraits, List, Str, Int, Instance, Array, Property,
+                        Range, Any, Float, cached_property, on_trait_change)
 from enthought.traits.ui.api import View, Item
 import enaml
 from enaml.qt.qt_application import QtApplication
@@ -99,17 +100,26 @@ class OceanModel(HasTraits):
     u = Property(Array)
     v = Property(Array)
     levels = Array
-    ax = List
-    ind = Array
-    idv = Array
-    figure = Any()
+    west = Float(-70.97)
+    east = Float(-70.82)
+    south = Float(42.25)
+    north = Float(42.35)
+    ax = Property(List, depends_on='west, east, south, north')
+    ind = Property(Array, depends_on='west, east, south, north')
+    idv = Property(Array, depends_on='ind')
+    figure = Instance(Figure)
+    #figure = Property(Instance(Figure), depends_on='ax, idv')
     quiver = Any()
     # TraitsUI view
     view = View(Item('figure', editor=MPLFigureEditor(),
                      show_label=False),
                 Item('itime'),
-                width=600,
-                height=400,
+                Item('north'),
+                Item('south'),
+                Item('west'),
+                Item('east'),
+                width=800,
+                height=800,
                 resizable=True)
 
     def _nc_default(self):
@@ -182,7 +192,8 @@ class OceanModel(HasTraits):
     def _get_v(self):
         return self.nc.variables['v'][self.itime, self.ilayer, :]
 
-    def _itime_changed(self):
+    @on_trait_change('itime')
+    def update_quiver(self):
         """ set the quiver plot data without redrawing
         """
         self.quiver.set_UVC(self.u[self.idv], self.v[self.idv])
@@ -193,46 +204,58 @@ class OceanModel(HasTraits):
         """
         return np.arange(-32, 2, 1)
 
-    def _ax_default(self):
+    def _get_ax(self):
         """ region to plot
         """
-        return [-70.97, -70.82, 42.25, 42.35]
+        return [self.west, self.east, self.south, self.north]
 
-    def _ind_default(self):
+    @cached_property
+    def _get_ind(self):
         """ find velocity points in bounding box
         """
-        return np.argwhere((self.lonc >= self.ax[0]) &
-                           (self.lonc <= self.ax[1]) &
-                           (self.latc >= self.ax[2]) &
-                           (self.latc <= self.ax[3]))
+        print 'get ind'
+        return np.argwhere((self.lonc >= self.west) &
+                           (self.lonc <= self.east) &
+                           (self.latc >= self.south) &
+                           (self.latc <= self.north))
 
-    def _idv_default(self):
+    @cached_property
+    def _get_idv(self):
+        print 'get idv'
         subsample = 3
         np.random.shuffle(self.ind)
         Nvec = int(len(self.ind) / subsample)
         return self.ind[:Nvec]
 
+    @on_trait_change('west, east, south, north')
+    def update_plot(self, axis=None):
+        """ 
+        """
+        if axis is None and self.figure is not None:
+            axis = self.figure.axes[0]
+        #print self.figure
+        axis.axis(self.ax)
+        axis.patch.set_facecolor('0.5')
+        #cbar = plt.colorbar()
+        #cbar.set_label('Water Depth (m)', rotation=-90)
+        self.quiver = axis.quiver(self.lonc[self.idv],
+                       self.latc[self.idv],
+                       self.u[self.idv],
+                       self.v[self.idv],
+                       scale=20)
+        axis.quiverkey(self.quiver, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
+        #plt.title('NECOFS Velocity, Layer %d, %s' % (self.ilayer, self.daystr))
+
     def _figure_default(self):
         # tricontourf plot of water depth with vectors on top
-        print 'getting figure'
-        #fig1 = plt.figure(figsize=(18, 10))
+        print 'get figure'
         fig1 = Figure(figsize=(600,600), dpi=72, facecolor=(1,1,1), edgecolor=(0,0,0))
         ax1 = fig1.add_subplot(111, aspect=(1.0/np.cos(np.mean(self.lat)*np.pi/180.0)))
         ax1.tricontourf(self.tri, -self.h,
                         levels=self.levels,
                         shading='faceted',
                         cmap=plt.cm.gist_earth)
-        ax1.axis(self.ax)
-        ax1.patch.set_facecolor('0.5')
-        #cbar = plt.colorbar()
-        #cbar.set_label('Water Depth (m)', rotation=-90)
-        self.quiver = ax1.quiver(self.lonc[self.idv],
-                       self.latc[self.idv],
-                       self.u[self.idv],
-                       self.v[self.idv],
-                       scale=20)
-        ax1.quiverkey(self.quiver, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
-        #plt.title('NECOFS Velocity, Layer %d, %s' % (self.ilayer, self.daystr))
+        self.update_plot(ax1)
         return fig1
 
 if __name__ == '__main__':
