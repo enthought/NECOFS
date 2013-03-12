@@ -34,12 +34,13 @@ import numpy as np
 import matplotlib
 # We want matplotlib to use a QT backend
 matplotlib.use('Qt4Agg')
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import matplotlib.tri as Tri
 import netCDF4
 
 # Enthought library imports
-from traits.api import HasTraits, List, Str, Int, Instance, Array, Property, Any
+from traits.api import HasTraits, List, Str, Int, Instance, Array, Property, Range, Any
 from enthought.traits.ui.api import View, Item
 import enaml
 from enaml.qt.qt_application import QtApplication
@@ -79,13 +80,14 @@ class MPLFigureEditor(BasicEditorFactory):
 
 class OceanModel(HasTraits):
 
-    url = Str('http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc')
+    #url = Str('http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc')
+    url = Str('10step_nc4.nc')
     nc = Any()
     keys = List
     ilayer = Int(0)
     start = Instance(dt.datetime)
     daystr = Property(Str, depends_on='itime')
-    itime = Int(0)
+    itime = Range(0,10)
     time_var = Any()
     lat = Array
     lon = Array
@@ -100,11 +102,12 @@ class OceanModel(HasTraits):
     ax = List
     ind = Array
     idv = Array
-    figure = Property(Any(), depends_on='itime')
+    figure = Any()
     quiver = Any()
     # TraitsUI view
     view = View(Item('figure', editor=MPLFigureEditor(),
                      show_label=False),
+                Item('itime'),
                 width=600,
                 height=400,
                 resizable=True)
@@ -179,13 +182,12 @@ class OceanModel(HasTraits):
     def _get_v(self):
         return self.nc.variables['v'][self.itime, self.ilayer, :]
 
-    '''
     def _itime_changed(self):
         """ set the quiver plot data without redrawing
         """
-        self.quiver.set_UVC(self.u, self.v)
-        plt.draw()
-    '''
+        self.quiver.set_UVC(self.u[self.idv], self.v[self.idv])
+        self.figure.canvas.draw()
+        plt.pause(0.001)
 
     def _levels_default(self):
         """ depth contours to plot
@@ -211,9 +213,11 @@ class OceanModel(HasTraits):
         Nvec = int(len(self.ind) / subsample)
         return self.ind[:Nvec]
 
-    def _get_figure(self):
+    def _figure_default(self):
         # tricontourf plot of water depth with vectors on top
-        fig1 = plt.figure(figsize=(18, 10))
+        print 'getting figure'
+        #fig1 = plt.figure(figsize=(18, 10))
+        fig1 = Figure(figsize=(600,600), dpi=72, facecolor=(1,1,1), edgecolor=(0,0,0))
         ax1 = fig1.add_subplot(111, aspect=(1.0/np.cos(np.mean(self.lat)*np.pi/180.0)))
         ax1.tricontourf(self.tri, -self.h,
                         levels=self.levels,
@@ -229,7 +233,7 @@ class OceanModel(HasTraits):
                        self.v[self.idv],
                        scale=20)
         ax1.quiverkey(self.quiver, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
-        plt.title('NECOFS Velocity, Layer %d, %s' % (self.ilayer, self.daystr))
+        #plt.title('NECOFS Velocity, Layer %d, %s' % (self.ilayer, self.daystr))
         return fig1
 
 if __name__ == '__main__':
