@@ -249,7 +249,8 @@ class OceanModel(HasTraits):
     def _figure_default(self):
         # tricontourf plot of water depth with vectors on top
         print 'get figure'
-        fig1 = Figure(figsize=(600,600), dpi=72, facecolor=(1,1,1), edgecolor=(0,0,0))
+        #fig1 = Figure(figsize=(600,600), dpi=72, facecolor=(1,1,1), edgecolor=(0,0,0))
+        fig1 = plt.figure(figsize=(18, 10))
         ax1 = fig1.add_subplot(111, aspect=(1.0/np.cos(np.mean(self.lat)*np.pi/180.0)))
         ax1.tricontourf(self.tri, -self.h,
                         levels=self.levels,

@@ -13,5 +13,6 @@ enamldef Main(Window):
         Label: daystr:
             text << model.daystr
         Slider: itime:
+            maximum = 9
             value := model.itime
 
