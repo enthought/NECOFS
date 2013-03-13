@@ -1,17 +1,19 @@
-from enaml.layout.api import hbox, vbox
-from enaml.widgets.api import Window, Container, MPLCanvas, Slider, Label
+from enaml.layout.api import hbox, vbox, spacer
+from enaml.widgets.api import Window, Container, MPLCanvas, Slider, Label, DatetimeSelector
 from matplotlib.figure import Figure
 
 enamldef Main(Window):
     attr model
     Container:
         constraints = [
-            hbox(canvas, vbox(daystr, itime))
+            hbox(canvas, vbox(dt, itime, spacer))
             ]
         MPLCanvas: canvas:
+            constraints = [width==600, height==600]
             figure << model.figure
-        Label: daystr:
-            text << model.daystr
+        DatetimeSelector: dt:
+            datetime_format = 'yyyy-MMM-dd HH:mm'
+            datetime := model.start
         Slider: itime:
             maximum = 9
             value := model.itime

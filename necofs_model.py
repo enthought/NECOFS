@@ -86,9 +86,9 @@ class OceanModel(HasTraits):
     nc = Any()
     keys = List
     ilayer = Int(0)
-    start = Instance(dt.datetime)
+    start = Property(Instance(dt.datetime), depends_on='itime')
     daystr = Property(Str, depends_on='itime')
-    itime = Range(0,10)
+    itime = Range(0, 10)
     time_var = Any()
     lat = Array
     lon = Array
@@ -134,13 +134,10 @@ class OceanModel(HasTraits):
         """ Desired time slice
         """
         self.itime = netCDF4.date2index(self.start, self.time_var, select='nearest')
-        self._start = start
 
     def _get_start(self):
-        try:
-            return self._start
-        except AttributeError:
-            return dt.datetime.utcnow()
+        return netCDF4.num2date(self.time_var[self.itime],
+                                 self.time_var.units)
 
     def _time_var_default(self):
         return self.nc.variables['time']
