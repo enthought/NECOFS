@@ -102,12 +102,16 @@ class OceanModel(HasTraits):
     u = Property(Array)
     v = Property(Array)
     levels = Array
-    west = Float(-70.97)
-    east = Float(-70.82)
-    south = Float(42.25)
-    north = Float(42.35)
-    ax = Property(List, depends_on='west, east, south, north')
-    ind = Property(Array, depends_on='west, east, south, north')
+    # west = Float(-70.97)
+    # east = Float(-70.82)
+    # south = Float(42.25)
+    # north = Float(42.35)
+    west = Float(-71.2)
+    east = Float(-69.4)
+    south = Float(40.95)
+    north = Float(42.1)
+    ax = Property(List) #, depends_on='west, east, south, north')
+    ind = Property(Array, depends_on='ax')
     idv = Property(Array, depends_on='ind')
     figure = Instance(Figure)
     quiver = Any()
@@ -206,12 +210,19 @@ class OceanModel(HasTraits):
         """
         return np.arange(-32, 2, 1)
 
+    def _set_ax(self, ax):
+        """ region to plot
+        """
+        self.west, self.east, self.south, self.north = ax
+        #import pudb; pudb.set_trace()
+        self.update_plot()
+
     def _get_ax(self):
         """ region to plot
         """
         return [self.west, self.east, self.south, self.north]
 
-    @cached_property
+    #@cached_property
     def _get_ind(self):
         """ find velocity points in bounding box
         """
@@ -222,15 +233,17 @@ class OceanModel(HasTraits):
                            (self.latc >= self.south) &
                            (self.latc <= self.north))
 
-    @cached_property
+            #@cached_property
     def _get_idv(self):
         if self.verbose:
             print 'get idv'
         subsample = len(self.ind) // 3000
         return self.ind[::subsample]
 
-    @on_trait_change('west, east, south, north')
+    @on_trait_change('ax')
     def update_plot(self, *args, **kwargs):
+        if self.verbose:
+            print 'updating quiver plot'
         self.axis_and_quiver()
         self.figure.canvas.draw()
 
@@ -239,7 +252,6 @@ class OceanModel(HasTraits):
         """
         if axis is None and self.figure is not None:
             axis = self.figure.axes[0]
-        axis.axis(self.ax)
         axis.patch.set_facecolor('0.5')
         #cbar = plt.colorbar()
         #cbar.set_label('Water Depth (m)', rotation=-90)
@@ -250,13 +262,15 @@ class OceanModel(HasTraits):
             # XXX: is this necessary?
             except AttributeError, TypeError:
                 pass
-        self.quiver = axis.quiver(self.lonc[self.idv],
-                       self.latc[self.idv],
-                       self.u[self.idv],
-                       self.v[self.idv],
-                       scale=5,
-                       units='width')
-        axis.quiverkey(self.quiver, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
+        try:
+            self.quiver = axis.quiver(self.lonc[self.idv],
+                           self.latc[self.idv],
+                           self.u[self.idv],
+                           self.v[self.idv],
+                           scale=20, units='width', width=0.001)
+            axis.quiverkey(self.quiver, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
+        except Exception, e:
+            print e
         #plt.title('NECOFS Velocity, Layer %d, %s' % (self.ilayer, self.daystr))
 
     def _figure_default(self):
@@ -269,6 +283,7 @@ class OceanModel(HasTraits):
                         levels=self.levels,
                         shading='faceted',
                         cmap=plt.cm.gist_earth)
+        ax1.axis(self.ax)
         self.axis_and_quiver(axis=ax1)
         ax1.callbacks.connect('xlim_changed', self.on_pan_or_zoom)
         ax1.callbacks.connect('ylim_changed', self.on_pan_or_zoom)
@@ -277,7 +292,10 @@ class OceanModel(HasTraits):
     def on_pan_or_zoom(self, axis):
         west, east = axis.xaxis.get_view_interval()
         south, north = axis.yaxis.get_view_interval()
-        print west, east, south, north
+        if not np.allclose(np.array(self.ax), np.array([west, east, south, north])):
+            if self.verbose:
+                print [west, east, south, north], self.ax
+            self.ax = [west, east, south, north]
 
 if __name__ == '__main__':
 
