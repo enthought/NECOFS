@@ -270,7 +270,14 @@ class OceanModel(HasTraits):
                         shading='faceted',
                         cmap=plt.cm.gist_earth)
         self.axis_and_quiver(axis=ax1)
+        ax1.callbacks.connect('xlim_changed', self.on_pan_or_zoom)
+        ax1.callbacks.connect('ylim_changed', self.on_pan_or_zoom)
         return fig1
+
+    def on_pan_or_zoom(self, axis):
+        west, east = axis.xaxis.get_view_interval()
+        south, north = axis.yaxis.get_view_interval()
+        print west, east, south, north
 
 if __name__ == '__main__':
 

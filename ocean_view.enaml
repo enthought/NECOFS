@@ -10,6 +10,7 @@ enamldef Main(Window):
             hbox(canvas, vbox(dt, itime, geo, spacer))
             ]
         MPLCanvas: canvas:
+            toolbar_visible = True
             constraints = [width>=600, height>=600]
             figure << model.figure
         DatetimeSelector: dt:
