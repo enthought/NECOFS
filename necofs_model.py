@@ -28,6 +28,7 @@ temperature and salinity changes.
 
 # standard library imports
 import datetime as dt
+import weakref
 
 # Major library imports
 import numpy as np
@@ -40,7 +41,7 @@ import matplotlib.tri as Tri
 import netCDF4
 
 # Enthought library imports
-from traits.api import (HasTraits, List, Str, Int, Instance, Array, Property,
+from traits.api import (HasTraits, List, Str, Int, Instance, Array, Property, Bool,
                         Range, Any, Float, cached_property, on_trait_change)
 from enthought.traits.ui.api import View, Item
 import enaml
@@ -55,6 +56,7 @@ from matplotlib.figure import Figure
 from enthought.traits.ui.qt4.editor import Editor
 from enthought.traits.ui.qt4.basic_editor_factory import BasicEditorFactory
 
+VERBOSE = False
 
 class _MPLFigureEditor(Editor):
 
@@ -108,8 +110,8 @@ class OceanModel(HasTraits):
     ind = Property(Array, depends_on='west, east, south, north')
     idv = Property(Array, depends_on='ind')
     figure = Instance(Figure)
-    #figure = Property(Instance(Figure), depends_on='ax, idv')
     quiver = Any()
+    verbose = Bool(VERBOSE)
     # TraitsUI view
     view = View(Item('figure', editor=MPLFigureEditor(),
                      show_label=False),
@@ -189,12 +191,15 @@ class OceanModel(HasTraits):
     def _get_v(self):
         return self.nc.variables['v'][self.itime, self.ilayer, :]
 
-    @on_trait_change('itime')
+    @on_trait_change('itime, idv')
     def update_quiver(self):
         """ set the quiver plot data without redrawing
         """
-        self.quiver.set_UVC(self.u[self.idv], self.v[self.idv])
-        self.figure.canvas.draw()
+        try:
+            self.quiver.set_UVC(self.u[self.idv], self.v[self.idv])
+            self.figure.canvas.draw()
+        except Exception, e:
+            print e
 
     def _levels_default(self):
         """ depth contours to plot
@@ -210,7 +215,8 @@ class OceanModel(HasTraits):
     def _get_ind(self):
         """ find velocity points in bounding box
         """
-        print 'get ind'
+        if self.verbose:
+            print 'get ind'
         return np.argwhere((self.lonc >= self.west) &
                            (self.lonc <= self.east) &
                            (self.latc >= self.south) &
@@ -218,42 +224,52 @@ class OceanModel(HasTraits):
 
     @cached_property
     def _get_idv(self):
-        print 'get idv'
-        subsample = 3
-        np.random.shuffle(self.ind)
-        Nvec = int(len(self.ind) / subsample)
-        return self.ind[:Nvec]
+        if self.verbose:
+            print 'get idv'
+        subsample = len(self.ind) // 3000
+        return self.ind[::subsample]
 
     @on_trait_change('west, east, south, north')
-    def update_plot(self, axis=None):
-        """ 
+    def update_plot(self, *args, **kwargs):
+        self.axis_and_quiver()
+        self.figure.canvas.draw()
+
+    def axis_and_quiver(self, axis=None):
+        """ Set (or change) axis limits and draw quiver plot in that region
         """
         if axis is None and self.figure is not None:
             axis = self.figure.axes[0]
-        #print self.figure
         axis.axis(self.ax)
         axis.patch.set_facecolor('0.5')
         #cbar = plt.colorbar()
         #cbar.set_label('Water Depth (m)', rotation=-90)
+        if self.quiver is not None:
+            try:
+                self.quiver.remove()
+                del self.quiver
+            # XXX: is this necessary?
+            except AttributeError, TypeError:
+                pass
         self.quiver = axis.quiver(self.lonc[self.idv],
                        self.latc[self.idv],
                        self.u[self.idv],
                        self.v[self.idv],
-                       scale=20)
+                       scale=5,
+                       units='width')
         axis.quiverkey(self.quiver, 0.92, 0.08, 0.50, '0.5 m/s', labelpos='W')
         #plt.title('NECOFS Velocity, Layer %d, %s' % (self.ilayer, self.daystr))
 
     def _figure_default(self):
         # tricontourf plot of water depth with vectors on top
-        print 'get figure'
-        #fig1 = Figure(figsize=(600,600), dpi=72, facecolor=(1,1,1), edgecolor=(0,0,0))
-        fig1 = plt.figure(figsize=(18, 10))
+        if self.verbose:
+            print 'get figure'
+        fig1 = plt.figure(figsize=(12, 10))
         ax1 = fig1.add_subplot(111, aspect=(1.0/np.cos(np.mean(self.lat)*np.pi/180.0)))
         ax1.tricontourf(self.tri, -self.h,
                         levels=self.levels,
                         shading='faceted',
                         cmap=plt.cm.gist_earth)
-        self.update_plot(ax1)
+        self.axis_and_quiver(axis=ax1)
         return fig1
 
 if __name__ == '__main__':

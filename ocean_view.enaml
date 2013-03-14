@@ -1,15 +1,16 @@
 from enaml.layout.api import hbox, vbox, spacer
-from enaml.widgets.api import Window, Container, MPLCanvas, Slider, Label, DatetimeSelector
+from enaml.stdlib.slider_transforms import FloatTransform
+from enaml.widgets.api import Window, Container, MPLCanvas, Slider, Label, DatetimeSelector, GroupBox
 from matplotlib.figure import Figure
 
 enamldef Main(Window):
     attr model
     Container:
         constraints = [
-            hbox(canvas, vbox(dt, itime, spacer))
+            hbox(canvas, vbox(dt, itime, geo, spacer))
             ]
         MPLCanvas: canvas:
-            constraints = [width==600, height==600]
+            constraints = [width>=600, height>=600]
             figure << model.figure
         DatetimeSelector: dt:
             datetime_format = 'yyyy-MMM-dd HH:mm'
@@ -17,4 +18,40 @@ enamldef Main(Window):
         Slider: itime:
             maximum = 9
             value := model.itime
-
+        GroupBox: geo:
+            Label:
+                text << 'North: %4.1f' % model.north
+            Slider: north:
+                tick_position = 'no_ticks'
+                FloatTransform:
+                    minimum = float(model.lat.min())
+                    maximum = float(model.lat.max())
+                    precision = 200
+                    value := model.north
+            Label:
+                text << 'South: %4.1f' % model.south
+            Slider: south:
+                tick_position = 'no_ticks'
+                FloatTransform:
+                    minimum = float(model.lat.min())
+                    maximum = float(model.lat.max())
+                    precision = 200
+                    value := model.south
+            Label:
+                text << 'West: %4.1f' % model.west
+            Slider: west:
+                tick_position = 'no_ticks'
+                FloatTransform:
+                    minimum = float(model.lon.min())
+                    maximum = float(model.lon.max())
+                    precision = 200
+                    value := model.west
+            Label:
+                text << 'East: %4.1f' % model.east
+            Slider: east:
+                tick_position = 'no_ticks'
+                FloatTransform:
+                    minimum = float(model.lon.min())
+                    maximum = float(model.lon.max())
+                    precision = 200
+                    value := model.east
