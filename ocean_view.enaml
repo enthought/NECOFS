@@ -21,9 +21,9 @@ enamldef Main(Window):
             maximum = model.time_steps
             value := model.itime
         PushButton: animate:
-            text = 'animate'
+            text << 'animation %s' % ('start' if not model.running else 'stop')
             checkable = True
-            toggled :: model.animate(checked)
+            checked := model.running
         GroupBox: geo:
             Label:
                 text << 'North: %4.1f' % model.north

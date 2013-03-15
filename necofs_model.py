@@ -93,6 +93,7 @@ class OceanModel(HasTraits):
 
     #url = Str('http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc')
     url = Str('10step_nc4.nc')
+    running = Bool(False)
     nc = Any()
     keys = List
     ilayer = Int(0)
@@ -124,11 +125,13 @@ class OceanModel(HasTraits):
     idv = Property(Array, depends_on='ind')
     figure = Instance(Figure)
     quiver = Any()
+    ani = Instance(animation.FuncAnimation)
     verbose = Bool(VERBOSE)
     # TraitsUI view
     view = View(Item('figure', editor=MPLFigureEditor(),
                      show_label=False),
                 Item('itime'),
+                Item('running'),
                 Item('north'),
                 Item('south'),
                 Item('west'),
@@ -262,16 +265,27 @@ class OceanModel(HasTraits):
         self.figure.canvas.draw()
 
     def _animate(self, *args):
-        if self.itime >= self.time_steps - 1:
-            self.itime = 0
-        else:
-            self.itime += 1
+        if self.running:
+            if self.itime >= self.time_steps - 1:
+                self.itime = 0
+            else:
+                self.itime += 1
         return self.quiver,
 
-    def animate(self, start):
-        if start:
-            self.ani = animation.FuncAnimation(self.figure, self._animate, interval=50, blit=True)
+    def _running_changed(self):
+        if self.running:
+            if self.verbose:
+                print 'start'
+            self.ani = animation.FuncAnimation(self.figure,
+                                               self._animate,
+                                               interval=10,
+                                               blit=True,
+                                               repeat=False)
         else:
+            if self.verbose:
+                print 'stop'
+            self.running = False
+            self.ani._stop()
             del self.ani
 
     def axis_and_quiver(self, axis=None):
