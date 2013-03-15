@@ -28,7 +28,10 @@ temperature and salinity changes.
 FILES
 =====
 
-`necofs_model.py` : Traits model to express the code.  Running this file as a script will run the TraitsUI version of the GUI.
-`enaml_gui.py` : Runs the enaml version of the GUI
-`ocean_view.enaml` : defines the enaml GUI (used by `enaml_gui.py`)
-`necofs_velocity.py` : export of original iPython notebook to a python script
+`necofs_model.py`: Traits model to express the code.  Running this file as a script will run the TraitsUI version of the GUI.
+
+`enaml_gui.py`: Runs the enaml version of the GUI
+
+`ocean_view.enaml`: defines the enaml GUI (used by `enaml_gui.py`)
+
+`necofs_velocity.py`: export of original iPython notebook to a python script
