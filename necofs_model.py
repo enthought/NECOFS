@@ -47,10 +47,11 @@ from enthought.traits.ui.api import View, Item
 import enaml
 from enaml.qt.qt_application import QtApplication
 from enaml.stdlib.sessions import SimpleSession
-from PySide import QtGui, QtCore
+from PySide.QtGui import QVBoxLayout, QWidget
 #from pyface.qt import QtGui, QtCore
 
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt4agg import (FigureCanvasQTAgg as FigureCanvas,
+                                                NavigationToolbar2QTAgg as NavigationToolbar)
 from matplotlib.figure import Figure
 
 from enthought.traits.ui.qt4.editor import Editor
@@ -70,10 +71,16 @@ class _MPLFigureEditor(Editor):
         pass
 
     def _create_canvas(self, parent):
-        """ Create the MPL canvas. """
-        # matplotlib commands to create a canvas
+        """ Create the matplotlib canvas. """
+        main_frame = QWidget()
         mpl_canvas = FigureCanvas(self.value)
-        return mpl_canvas
+        mpl_toolbar = NavigationToolbar(mpl_canvas, main_frame)
+        vbox = QVBoxLayout()
+        vbox.setSpacing(0)
+        vbox.addWidget(mpl_toolbar)
+        vbox.addWidget(mpl_canvas)
+        main_frame.setLayout(vbox)
+        return main_frame
 
 
 class MPLFigureEditor(BasicEditorFactory):
