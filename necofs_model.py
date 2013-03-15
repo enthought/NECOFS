@@ -91,8 +91,8 @@ class MPLFigureEditor(BasicEditorFactory):
 
 class OceanModel(HasTraits):
 
-    #url = Str('http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc')
-    url = Str('10step_nc4.nc')
+    url = Str('http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc')
+    #url = Str('10step_nc4.nc')
     running = Bool(False)
     nc = Any()
     keys = List
