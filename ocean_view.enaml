@@ -1,13 +1,14 @@
 from enaml.layout.api import hbox, vbox, spacer
 from enaml.stdlib.slider_transforms import FloatTransform
-from enaml.widgets.api import Window, Container, MPLCanvas, Slider, Label, DatetimeSelector, GroupBox
+from enaml.widgets.api import Window, Container, MPLCanvas, Slider, Label, DatetimeSelector, GroupBox, PushButton
+
 from matplotlib.figure import Figure
 
 enamldef Main(Window):
     attr model
     Container:
         constraints = [
-            hbox(canvas, vbox(dt, itime, geo, spacer))
+            hbox(canvas, vbox(dt, itime, animate, geo, spacer))
             ]
         MPLCanvas: canvas:
             toolbar_visible = True
@@ -17,8 +18,12 @@ enamldef Main(Window):
             datetime_format = 'yyyy-MMM-dd HH:mm'
             datetime := model.start
         Slider: itime:
-            maximum = 9
+            maximum = model.time_steps
             value := model.itime
+        PushButton: animate:
+            text = 'animate'
+            checkable = True
+            toggled :: model.animate(checked)
         GroupBox: geo:
             Label:
                 text << 'North: %4.1f' % model.north

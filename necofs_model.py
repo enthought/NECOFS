@@ -36,6 +36,7 @@ import matplotlib
 # We want matplotlib to use a QT backend
 matplotlib.use('Qt4Agg')
 from matplotlib.figure import Figure
+import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import matplotlib.tri as Tri
 import netCDF4
@@ -97,8 +98,9 @@ class OceanModel(HasTraits):
     ilayer = Int(0)
     start = Property(Instance(dt.datetime), depends_on='itime')
     daystr = Property(Str, depends_on='itime')
-    itime = Range(0, 10)
+    itime = Int
     time_var = Any()
+    time_steps = Property(Int)
     lat = Array
     lon = Array
     latc = Array
@@ -154,6 +156,11 @@ class OceanModel(HasTraits):
 
     def _time_var_default(self):
         return self.nc.variables['time']
+
+    def _get_time_steps(self):
+        #self.itime.maximum = len(self.time_var)
+        #return self.itime.maximum
+        return len(self.time_var)
 
     def _lat_default(self):
         """ Latitude of grid nodes
@@ -253,6 +260,19 @@ class OceanModel(HasTraits):
             print 'updating quiver plot'
         self.axis_and_quiver()
         self.figure.canvas.draw()
+
+    def _animate(self, *args):
+        if self.itime >= self.time_steps - 1:
+            self.itime = 0
+        else:
+            self.itime += 1
+        return self.quiver,
+
+    def animate(self, start):
+        if start:
+            self.ani = animation.FuncAnimation(self.figure, self._animate, interval=50, blit=True)
+        else:
+            del self.ani
 
     def axis_and_quiver(self, axis=None):
         """ Set (or change) axis limits and draw quiver plot in that region
