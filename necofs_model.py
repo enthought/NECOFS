@@ -91,8 +91,8 @@ class MPLFigureEditor(BasicEditorFactory):
 
 class OceanModel(HasTraits):
 
-    url = Str('http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc')
-    #url = Str('10step_nc4.nc')
+    #url = Str('http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Forecasts/NECOFS_FVCOM_OCEAN_MASSBAY_FORECAST.nc')
+    url = Str('10step_nc4.nc')
     running = Bool(False)
     nc = Any()
     keys = List
@@ -254,7 +254,7 @@ class OceanModel(HasTraits):
     def _get_idv(self):
         if self.verbose:
             print 'get idv'
-        subsample = len(self.ind) // 3000
+        subsample = max(1, len(self.ind) // 3000)
         return self.ind[::subsample]
 
     @on_trait_change('ax')
